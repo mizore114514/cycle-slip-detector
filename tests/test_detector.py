@@ -1,7 +1,8 @@
 import pytest
 import pandas as pd
 import numpy as np
-from core.detector import detect_gf, detect_mw, F1, F2, WL1, WL2, C, WL_WL
+from core.detector import detect_gf, detect_mw, detect_cycle_slips, F1, F2, WL1, WL2, C, WL_WL
+from tests.conftest import make_clean_data, make_slip_data
 
 
 def test_gf_no_slip(sample_rinex_data):
@@ -64,3 +65,32 @@ def test_mw_values_reasonable():
         df["P1"] / WL1 + df["P2"] / WL2
     )
     assert df["mw_value"].std() < 5.0
+
+
+def test_detect_cycle_slips_combined(sample_data_with_slip):
+    """合并检测: GF + MW 结果取并集"""
+    result = detect_cycle_slips(sample_data_with_slip)
+    assert len(result) >= 1
+    assert "time" in result.columns
+    assert "sv" in result.columns
+    assert "gf_jump" in result.columns
+    assert "mw_jump" in result.columns
+
+
+def test_detect_cycle_slips_multi_satellite():
+    """多卫星数据: 每个卫星独立检测"""
+    df = pd.concat(
+        [make_clean_data(), make_clean_data().assign(sv="G02")],
+        ignore_index=True,
+    )
+    mask = (df["sv"] == "G02") & (df.groupby("sv").cumcount() >= 50)
+    df.loc[mask, "L1"] += 10.0
+    result = detect_cycle_slips(df, gf_threshold=0.05)
+    assert len(result) >= 1
+    assert all(result["sv"] == "G02")
+
+
+def test_detect_cycle_slips_empty_on_clean_data(sample_rinex_data):
+    """干净数据: 无周跳检出"""
+    result = detect_cycle_slips(sample_rinex_data)
+    assert len(result) == 0

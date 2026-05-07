@@ -80,3 +80,46 @@ def detect_mw(
     sv = df["sv"].iloc[0] if "sv" in df.columns else "UNKNOWN"
     slips["sv"] = sv
     return slips[["time", "sv", "mw_value", "mw_mean", "mw_jump"]].reset_index(drop=True)
+
+
+def detect_cycle_slips(
+    df: pd.DataFrame,
+    gf_threshold: float = 0.05,
+    mw_window: int = 30,
+    mw_threshold: float = 1.0,
+) -> pd.DataFrame:
+    """对 RINEX 解析后的观测数据执行 TurboEdit 周跳探测。
+
+    对每个卫星分别运行 GF 和 MW 检测，结果取并集去重。
+
+    Args:
+        df: 观测数据，需含 time, sv, L1, L2, P1, P2 列
+        gf_threshold: GF 检测阈值（米）
+        mw_window: MW 滑动窗口大小（历元数）
+        mw_threshold: MW 检测阈值（宽巷周数）
+
+    Returns:
+        周跳列表 DataFrame，列: sv, time, gf_jump, mw_jump
+    """
+    all_slips = []
+
+    for sv, group in df.groupby("sv"):
+        gf_slips = detect_gf(group, threshold=gf_threshold)
+        mw_slips = detect_mw(group, window=mw_window, threshold=mw_threshold)
+
+        merged = pd.merge(
+            gf_slips[["time", "sv", "gf_jump"]],
+            mw_slips[["time", "sv", "mw_jump"]],
+            on=["time", "sv"],
+            how="outer",
+        )
+        all_slips.append(merged)
+
+    if not all_slips:
+        return pd.DataFrame(columns=["sv", "time", "gf_jump", "mw_jump"])
+
+    result = pd.concat(all_slips, ignore_index=True)
+    result = result.sort_values(["sv", "time"]).reset_index(drop=True)
+    result["gf_jump"] = result["gf_jump"].fillna("-")
+    result["mw_jump"] = result["mw_jump"].fillna("-")
+    return result[["sv", "time", "gf_jump", "mw_jump"]]
