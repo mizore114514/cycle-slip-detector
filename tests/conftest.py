@@ -1,0 +1,36 @@
+import pytest
+import numpy as np
+import pandas as pd
+
+
+def make_clean_data(n=100):
+    """生成模拟双频观测数据: 无周跳"""
+    np.random.seed(42)
+    t = pd.date_range("2024-01-01 00:00:00", periods=n, freq="30s")
+    L1 = np.cumsum(np.random.randn(n) * 0.01) + 1000000.0
+    L2 = np.cumsum(np.random.randn(n) * 0.01) + 800000.0
+    P1 = 21000000.0 + np.random.randn(n) * 0.5
+    P2 = 21000000.0 + np.random.randn(n) * 0.5
+    return pd.DataFrame({"time": t, "sv": "G01", "L1": L1, "L2": L2, "P1": P1, "P2": P2})
+
+
+def make_slip_data(n=100, slip_idx=50, slip_cycles=5.0):
+    """生成包含一个周跳的模拟数据: slip_idx 处 L1 跳变 slip_cycles 周"""
+    np.random.seed(42)
+    t = pd.date_range("2024-01-01 00:00:00", periods=n, freq="30s")
+    L1 = np.cumsum(np.random.randn(n) * 0.01) + 1000000.0
+    L1[slip_idx:] += slip_cycles
+    L2 = np.cumsum(np.random.randn(n) * 0.01) + 800000.0
+    P1 = 21000000.0 + np.random.randn(n) * 0.5
+    P2 = 21000000.0 + np.random.randn(n) * 0.5
+    return pd.DataFrame({"time": t, "sv": "G01", "L1": L1, "L2": L2, "P1": P1, "P2": P2})
+
+
+@pytest.fixture
+def sample_rinex_data():
+    return make_clean_data()
+
+
+@pytest.fixture
+def sample_data_with_slip():
+    return make_slip_data()
