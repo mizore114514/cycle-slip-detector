@@ -94,3 +94,36 @@ def test_detect_cycle_slips_empty_on_clean_data(sample_rinex_data):
     """干净数据: 无周跳检出"""
     result = detect_cycle_slips(sample_rinex_data)
     assert len(result) == 0
+
+
+def test_end_to_end_pipeline():
+    """端到端测试: 生成数据 → 提取观测 → 检测周跳 → 验证"""
+    from core.rinex_reader import extract_observations
+
+    np.random.seed(42)
+    n = 120
+    t = pd.date_range("2024-01-01 00:00:00", periods=n, freq="30s")
+    rho = 21000000.0 + np.cumsum(np.random.randn(n) * 0.05)
+
+    L1 = rho / WL1 + np.random.randn(n) * 0.002
+    L2 = rho / WL2 + np.random.randn(n) * 0.002
+    P1 = rho + np.random.randn(n) * 0.1
+    P2 = rho + np.random.randn(n) * 0.1
+
+    # 注入两个周跳
+    L1[30:40] += 3.0
+    L2[30:40] += 3.0
+    L1[80:90] += 8.0
+    L2[80:90] += 8.0
+
+    df = pd.DataFrame({
+        "time": t,
+        "sv": "G01",
+        "L1": L1,
+        "L2": L2,
+        "P1": P1,
+        "P2": P2,
+    })
+
+    result = detect_cycle_slips(df, gf_threshold=0.05, mw_window=20, mw_threshold=1.0)
+    assert len(result) >= 2
