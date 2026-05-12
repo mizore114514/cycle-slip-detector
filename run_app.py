@@ -5,7 +5,6 @@
 
 import sys
 import os
-import subprocess
 import webbrowser
 import time
 import threading
@@ -28,21 +27,20 @@ def main():
 
     threading.Thread(target=open_browser, args=(port,), daemon=True).start()
 
-    subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "streamlit",
-            "run",
-            app_path,
-            "--server.port",
-            str(port),
-            "--server.headless",
-            "true",
-            "--browser.serverAddress",
-            "localhost",
-        ]
-    )
+    from streamlit.web import cli as stcli
+
+    sys.argv = [
+        "streamlit",
+        "run",
+        app_path,
+        "--server.port",
+        str(port),
+        "--server.headless",
+        "true",
+        "--browser.serverAddress",
+        "localhost",
+    ]
+    sys.exit(stcli.main())
 
 
 if __name__ == "__main__":

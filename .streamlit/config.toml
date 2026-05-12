@@ -1,0 +1,4 @@
+[server]
+# 使用 watchdog 监听文件变化（已安装），避免默认的 polling 模式
+# 在 macOS 上因系统文件变化导致无限重启循环
+fileWatcherType = "watchdog"
