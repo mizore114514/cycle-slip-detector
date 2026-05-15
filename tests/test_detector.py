@@ -131,9 +131,8 @@ def test_end_to_end_pipeline():
 
 def test_charts_dark_theme():
     """验证 Plotly 图表应用暗色主题配色"""
-    from ui.charts import render_charts
-    from unittest.mock import MagicMock, patch
-    import plotly.graph_objects as go
+    from ui.charts import render_charts, DARK_TEMPLATE
+    from unittest.mock import patch
 
     np.random.seed(42)
     n = 60
@@ -164,16 +163,19 @@ def test_charts_dark_theme():
 
     with patch("streamlit.selectbox", fake_selectbox), \
          patch("streamlit.plotly_chart", fake_plotly_chart), \
-         patch("streamlit.subheader"), \
          patch("streamlit.markdown"):
         render_charts(df, slips_df, {})
 
     assert len(captured_figs) == 2  # GF + MW
 
+    for fig in captured_figs:
+        assert fig.layout.plot_bgcolor == DARK_TEMPLATE["bg"]
+        assert fig.layout.paper_bgcolor == DARK_TEMPLATE["bg"]
+
     gf_fig = captured_figs[0]
-    assert gf_fig.layout.plot_bgcolor == "#161B22"
     gf_line = gf_fig.data[0]
-    assert gf_line.line.color == "#58A6FF"
+    assert gf_line.line.color == DARK_TEMPLATE["line_blue"]
 
     mw_fig = captured_figs[1]
-    assert mw_fig.layout.plot_bgcolor == "#161B22"
+    mw_mean_line = mw_fig.data[1]
+    assert mw_mean_line.line.color == DARK_TEMPLATE["line_green"]
