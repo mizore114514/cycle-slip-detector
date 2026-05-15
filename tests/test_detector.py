@@ -127,3 +127,53 @@ def test_end_to_end_pipeline():
 
     result = detect_cycle_slips(df, gf_threshold=0.05, mw_window=20, mw_threshold=1.0)
     assert len(result) >= 2
+
+
+def test_charts_dark_theme():
+    """验证 Plotly 图表应用暗色主题配色"""
+    from ui.charts import render_charts
+    from unittest.mock import MagicMock, patch
+    import plotly.graph_objects as go
+
+    np.random.seed(42)
+    n = 60
+    t = pd.date_range("2024-01-01", periods=n, freq="30s")
+    df = pd.DataFrame({
+        "time": t,
+        "sv": "G01",
+        "L1": np.cumsum(np.random.randn(n) * 0.01) + 1e6,
+        "L2": np.cumsum(np.random.randn(n) * 0.01) + 8e5,
+        "P1": 21000000.0 + np.random.randn(n) * 0.3,
+        "P2": 21000000.0 + np.random.randn(n) * 0.3,
+    })
+
+    slips_df = pd.DataFrame({
+        "sv": ["G01"],
+        "time": [df.iloc[30]["time"]],
+        "gf_jump": ["5.0"],
+        "mw_jump": ["3.0"],
+    })
+
+    captured_figs = []
+
+    def fake_selectbox(label, options):
+        return "G01"
+
+    def fake_plotly_chart(fig, **kwargs):
+        captured_figs.append(fig)
+
+    with patch("streamlit.selectbox", fake_selectbox), \
+         patch("streamlit.plotly_chart", fake_plotly_chart), \
+         patch("streamlit.subheader"), \
+         patch("streamlit.markdown"):
+        render_charts(df, slips_df, {})
+
+    assert len(captured_figs) == 2  # GF + MW
+
+    gf_fig = captured_figs[0]
+    assert gf_fig.layout.plot_bgcolor == "#161B22"
+    gf_line = gf_fig.data[0]
+    assert gf_line.line.color == "#58A6FF"
+
+    mw_fig = captured_figs[1]
+    assert mw_fig.layout.plot_bgcolor == "#161B22"
