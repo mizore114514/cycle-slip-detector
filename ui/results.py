@@ -10,13 +10,19 @@ def render_results(slips: pd.DataFrame):
     Args:
         slips: detect_cycle_slips 返回的周跳 DataFrame
     """
-    st.subheader("📋 周跳检测结果")
+    st.markdown(
+        '<h3 style="color:#00D4AA;">📋 周跳检测结果</h3>', unsafe_allow_html=True
+    )
 
     if slips.empty:
         st.success("未检测到周跳，观测数据质量良好。")
         return
 
-    st.markdown(f"共检测到 **{len(slips)}** 处周跳")
+    n_slips = len(slips)
+    st.markdown(
+        f'共检测到 <span style="color:#F78166;font-weight:700;">{n_slips}</span> 处周跳',
+        unsafe_allow_html=True,
+    )
 
     display_df = slips.copy()
 
